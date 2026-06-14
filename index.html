@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="NYC Field Guide — Greenwich St HQ trip planner with offline checklists and JSON export." />
+<meta name="theme-color" content="#ffd400" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="NYC Guide" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<title>NYC Field Guide — Greenwich St HQ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+  :root{
+    --bg:#fbf6ee;
+    --paper:#ffffff;
+    --edge:#ece4d6;
+    --text:#2b2925;
+    --muted:#9a938a;
+    --yellow:#ffd400;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(0,0,0,0.04) 1px, transparent 0) 0 0/22px 22px,
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Mono', monospace;
+    min-height:100vh;
+    padding:26px 14px 70px;
+  }
+
+  .wrap{ max-width:660px; margin:0 auto; }
+
+  /* ---- Header ---- */
+  header{ margin-bottom:22px; animation: fadeUp .6s ease both; }
+
+  .marquee{
+    background:#000;
+    color:var(--yellow);
+    font-weight:700;
+    font-size:0.7rem;
+    letter-spacing:0.18em;
+    padding:7px 12px;
+    border-radius:6px;
+    overflow:hidden;
+    white-space:nowrap;
+    margin-bottom:16px;
+  }
+  .marquee span{ display:inline-block; padding-left:100%; animation: scroll 20s linear infinite; }
+  @keyframes scroll{ 0%{transform:translateX(0);} 100%{transform:translateX(-100%);} }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:800;
+    font-size:3.1rem;
+    line-height:1;
+    letter-spacing:-0.01em;
+    margin:0 0 6px;
+  }
+  .sub{ color:var(--muted); font-size:0.85rem; line-height:1.6; max-width:48ch; }
+  .sub strong{ color:var(--text); border-bottom:2px solid var(--yellow); }
+
+  /* ---- Progress ---- */
+  .progress-wrap{
+    margin-top:18px;
+    background:var(--paper);
+    border:1px solid var(--edge);
+    border-radius:12px;
+    padding:14px 16px;
+    box-shadow:0 2px 0 var(--edge);
+  }
+  .progress-label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:0.72rem; color:var(--muted); margin-bottom:9px;
+    letter-spacing:0.06em;
+  }
+  .progress-label b{ font-size:1rem; color:var(--text); font-family:'Fraunces', serif; }
+  .progress-bar{ height:12px; border-radius:7px; background:#f1ece2; overflow:hidden; position:relative; }
+  .progress-fill{
+    height:100%;
+    border-radius:7px;
+    width:0%;
+    background:linear-gradient(90deg,#ffd400,#ffb000,#ffd400);
+    background-size:200% 100%;
+    animation: shimmer 2.5s linear infinite;
+    transition:width .6s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes shimmer{ 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
+
+  .celebrate{
+    margin-top:10px; text-align:center; font-family:'Fraunces', serif;
+    font-weight:800; font-size:1rem; color:#0a8a3a;
+    display:none; animation: pop .5s ease;
+  }
+  .celebrate.show{ display:block; }
+  @keyframes pop{ 0%{transform:scale(.7); opacity:0;} 60%{transform:scale(1.08);} 100%{transform:scale(1); opacity:1;} }
+
+  /* ---- Day cards ---- */
+  .day{
+    background:var(--paper);
+    border:1px solid var(--edge);
+    border-left:8px solid var(--line, #EE352E);
+    border-radius:14px;
+    margin:18px 0;
+    padding:18px 18px 10px;
+    box-shadow:0 3px 0 var(--edge);
+    opacity:0; transform:translateY(14px);
+    animation: fadeUp .5s ease forwards;
+  }
+  @keyframes fadeUp{ to{ opacity:1; transform:translateY(0); } }
+
+  .day-head{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .badge{
+    width:42px; height:42px; min-width:42px;
+    border-radius:50%;
+    background:var(--line, #EE352E);
+    color:#fff;
+    font-family:'Fraunces', serif;
+    font-weight:800;
+    font-size:1.4rem;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 0 0 4px #fff, 0 0 0 5px var(--edge);
+    flex-shrink:0;
+  }
+  .day-titles{ flex:1; }
+  .day-titles h2{
+    font-family:'Fraunces', serif; font-weight:800;
+    font-size:1.55rem; letter-spacing:-0.01em; margin:0;
+  }
+  .day-titles p{ margin:2px 0 0; color:var(--muted); font-size:0.78rem; }
+  .day-count{
+    font-size:0.7rem; color:var(--muted); white-space:nowrap;
+    font-weight:700; letter-spacing:0.05em;
+  }
+
+  .block{ margin:12px 0 14px; }
+  .block-time{
+    display:inline-block;
+    font-size:0.66rem;
+    letter-spacing:0.12em;
+    color:#fff;
+    background:var(--line, #EE352E);
+    padding:4px 9px;
+    border-radius:5px;
+    margin-bottom:8px;
+    font-weight:700;
+  }
+  .block-note{
+    color:var(--muted);
+    font-size:0.8rem;
+    font-style:italic;
+    margin:5px 0 0 2px;
+    line-height:1.4;
+  }
+
+  /* ---- Tasks ---- */
+  .task{
+    display:flex;
+    align-items:flex-start;
+    gap:11px;
+    padding:8px 6px;
+    border-radius:8px;
+    transition:background .15s ease, transform .25s ease, opacity .25s ease;
+  }
+  .task:hover{ background:#faf7f0; }
+  .task.enter{ animation: slideIn .35s ease; }
+  @keyframes slideIn{ from{ opacity:0; transform:translateX(-8px); } to{ opacity:1; transform:translateX(0); } }
+
+  .check-wrap{ position:relative; width:22px; height:22px; flex-shrink:0; margin-top:1px; }
+  .check{
+    appearance:none; -webkit-appearance:none;
+    width:22px; height:22px;
+    border-radius:50%;
+    border:2.5px solid var(--line, #EE352E);
+    cursor:pointer;
+    background:#fff;
+    transition: background .2s ease, transform .15s ease;
+    margin:0;
+  }
+  .check:active{ transform:scale(.88); }
+  .check:checked{ background:var(--line, #EE352E); animation: checkPop .3s ease; }
+  @keyframes checkPop{ 0%{ transform:scale(.7);} 60%{ transform:scale(1.15);} 100%{ transform:scale(1);} }
+  .check-mark{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:0.8rem; font-weight:700; pointer-events:none;
+    opacity:0; transition:opacity .15s ease;
+  }
+  .check:checked + .check-mark{ opacity:1; }
+
+  .task-body{ flex:1; }
+  .task-text{ font-size:0.94rem; line-height:1.4; transition: color .2s ease; }
+  .task.done .task-text{ text-decoration: line-through; color:var(--muted); }
+  .task-note{ color:var(--muted); font-size:0.78rem; margin-top:3px; line-height:1.45; }
+  .task.done .task-note{ opacity:0.6; }
+  .task-time{ font-size:0.66rem; color:var(--line, #EE352E); margin-top:4px; letter-spacing:0.04em; font-weight:700; }
+  .task.done .task-time{ color:#0a8a3a; }
+  .task-from{
+    display:inline-block; font-size:0.62rem; color:var(--muted);
+    background:#f1ece2; border-radius:4px; padding:1px 6px; margin-top:4px; letter-spacing:0.05em;
+  }
+
+  .del{
+    background:none; border:none; color:var(--muted);
+    cursor:pointer; font-size:0.9rem; opacity:0.35;
+    padding:2px 4px; transition:opacity .15s ease, color .15s ease;
+  }
+  .del:hover{ opacity:1; color:#e03b3b; }
+
+  /* ---- Done section ---- */
+  .done-section{
+    margin-top:14px; padding-top:12px; border-top:2px dashed var(--edge);
+  }
+  .done-toggle{
+    background:none; border:none; cursor:pointer;
+    font-family:'Fraunces', serif; font-weight:700; font-size:0.85rem;
+    color:#0a8a3a; padding:0; display:flex; align-items:center; gap:6px;
+  }
+  .done-toggle .arrow{ transition:transform .25s ease; display:inline-block; }
+  .done-section.open .done-toggle .arrow{ transform:rotate(90deg); }
+  .done-list{
+    max-height:0; overflow:hidden; transition: max-height .35s ease;
+  }
+  .done-section.open .done-list{ max-height:1000px; }
+  .done-list .task{ opacity:0.85; }
+
+  /* ---- Add task row ---- */
+  .add-row{
+    display:flex; gap:8px; margin:12px 0 4px;
+    border-top:1px dashed var(--edge);
+    padding-top:12px;
+  }
+  .add-row input{
+    flex:1;
+    background:var(--bg);
+    border:1.5px solid var(--edge);
+    color:var(--text);
+    border-radius:8px;
+    padding:9px 11px;
+    font-family:'Space Mono', monospace;
+    font-size:0.82rem;
+    transition:border-color .15s ease;
+  }
+  .add-row input:focus{ outline:none; border-color:var(--line, #EE352E); }
+  .add-row button{
+    background:var(--line, #EE352E);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    font-weight:700;
+    font-size:0.8rem;
+    cursor:pointer;
+    letter-spacing:0.05em;
+    transition:filter .15s ease, transform .1s ease;
+  }
+  .add-row button:hover{ filter:brightness(1.1); }
+  .add-row button:active{ transform:scale(.96); }
+
+  /* ---- Skip list ---- */
+  .skip{
+    background:var(--paper);
+    border:1px solid var(--edge);
+    border-radius:14px;
+    padding:16px 18px;
+    margin:18px 0;
+    font-size:0.82rem;
+    color:var(--muted);
+    box-shadow:0 3px 0 var(--edge);
+  }
+  .skip strong{ color:var(--text); font-family:'Fraunces', serif; font-size:0.95rem; }
+  .skip ul{ margin:8px 0 0; padding-left:18px; }
+
+  /* ---- Footer / export ---- */
+  footer{ margin-top:28px; }
+  .copy-card{
+    background:#000;
+    color:var(--yellow);
+    border-radius:14px;
+    padding:18px;
+    text-align:center;
+    box-shadow:0 3px 0 var(--edge);
+  }
+  .copy-card h3{
+    font-family:'Fraunces', serif; font-weight:800;
+    margin:0 0 4px; font-size:1.35rem; letter-spacing:-0.01em; color:#fff;
+  }
+  .copy-card p{ margin:0 0 14px; font-size:0.78rem; opacity:0.75; color:#fff; }
+  .copy-card button{
+    background:var(--yellow);
+    color:#000;
+    border:none;
+    border-radius:9px;
+    padding:13px 22px;
+    font-family:'Fraunces', serif; font-weight:800;
+    font-size:1.05rem;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    width:100%;
+    transition: transform .12s ease, filter .15s ease;
+  }
+  .copy-card button:hover{ filter:brightness(1.05); }
+  .copy-card button:active{ transform:scale(.98); }
+  .copy-status{ margin-top:9px; font-size:0.74rem; font-weight:700; min-height:1em; }
+
+  .json-log{
+    margin-top:14px;
+    background:#15140f;
+    border:1px solid #2a2820;
+    border-radius:10px;
+    padding:12px;
+    max-height:240px;
+    overflow:auto;
+    font-size:0.7rem;
+    color:#8de08e;
+    white-space:pre-wrap;
+    word-break:break-word;
+    display:none;
+  }
+  .json-log.show{ display:block; }
+
+  .toggle-log{
+    background:none; border:none; color:var(--muted);
+    font-size:0.72rem; text-decoration:underline; cursor:pointer;
+    margin-top:10px; display:block; text-align:center; width:100%;
+    font-family:'Space Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="marquee"><span>NOW BOARDING — GREENWICH ST EXPRESS · NEXT STOP: EVERY NEIGHBORHOOD WORTH SEEING · DOORS CLOSING SUNDAY · &nbsp;&nbsp;&nbsp; NOW BOARDING — GREENWICH ST EXPRESS · NEXT STOP: EVERY NEIGHBORHOOD WORTH SEEING ·</span></div>
+    <h1>NYC Field Guide</h1>
+    <p class="sub">Optimized for <strong>Greenwich St</strong> — most tourists spend 30–60 min getting to places that are outside your hotel. You won't.</p>
+
+    <div class="progress-wrap">
+      <div class="progress-label"><span id="progressText">0 / 0 stops complete</span><b id="progressPct">0%</b></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="celebrate" id="celebrate">🎉 You actually did NYC.</div>
+    </div>
+  </header>
+
+  <main id="days"></main>
+
+  <div class="skip">
+    <strong>⚠ Skip unless you have extra time</strong>
+    <ul>
+      <li>Empire State Building</li>
+      <li>Coney Island</li>
+      <li>Multiple museums</li>
+    </ul>
+    <p style="margin-top:8px;">You've only got a few evenings — better to see more neighborhoods than stand in observation-deck lines all week.</p>
+  </div>
+
+  <footer>
+    <div class="copy-card">
+      <h3>MetroCard Export</h3>
+      <p>Copy your full itinerary — every stop, status, note, and timestamp — as JSON.</p>
+      <button id="copyBtn">📋 Copy Trip Status</button>
+      <div class="copy-status" id="copyStatus"></div>
+    </div>
+    <button class="toggle-log" id="toggleLog">show / hide JSON preview</button>
+    <pre class="json-log" id="jsonLog"></pre>
+  </footer>
+
+</div>
+
+<script>
+/* =========================================================
+   DATA
+========================================================= */
+const tripData = [
+  {
+    id:'sun', day:'Sunday', subtitle:'Arrival + Easy Exploration', badge:'1', color:'#EE352E',
+    blocks:[
+      { time:'4:00 – 5:00 PM', tasks:[
+        {id:'sun-1', text:'Check into hotel'},
+        {id:'sun-2', text:'Unpack'},
+        {id:'sun-3', text:'Grab coffee and start walking'}
+      ]},
+      { time:'5:00 – 6:30 PM', tasks:[
+        {id:'sun-4', text:'Visit 9/11 Memorial', note:"Take your time here — it's powerful and worth seeing at least once."}
+      ]},
+      { time:'6:30 – 7:00 PM', tasks:[
+        {id:'sun-5', text:'Walk through the Oculus', note:'Very futuristic architecture. Great photos.'}
+      ]},
+      { time:'Sunset', tasks:[
+        {id:'sun-6', text:'Walk to Whitehall Terminal'},
+        {id:'sun-7', text:'Ride the free Staten Island Ferry', note:'Sit on the right side heading out — Statue of Liberty, the harbor, Manhattan skyline. Cost = $0.'}
+      ]},
+      { time:'Dinner', tasks:[
+        {id:'sun-8', text:'Find a local restaurant in FiDi', note:'Then head back and rest.'}
+      ]}
+    ]
+  },
+  {
+    id:'mon', day:'Monday', subtitle:'Midtown Night (after work)', badge:'B', color:'#FF6319',
+    blocks:[
+      { time:'5:30 PM', note:'Subway uptown — get off near Rockefeller Center.', tasks:[] },
+      { time:'6:00 PM', tasks:[
+        {id:'mon-1', text:'Explore Rockefeller Center'},
+        {id:'mon-2', text:"See St. Patrick's Cathedral"},
+        {id:'mon-3', text:'Visit FAO Schwarz'}
+      ]},
+      { time:'7:00 PM', tasks:[
+        {id:'mon-4', text:'Go to Top of the Rock', note:"Friend's specific recommendation — go close to sunset. Central Park, Empire State Building, Midtown skyline."}
+      ]},
+      { time:'After', tasks:[
+        {id:'mon-5', text:'Walk down Fifth Avenue'},
+        {id:'mon-6', text:'Visit Times Square for 15–20 minutes', note:"(That's enough 😆)"}
+      ]}
+    ]
+  },
+  {
+    id:'tue', day:'Tuesday', subtitle:'Museum + Central Park (after work)', badge:'A', color:'#0039A6',
+    blocks:[
+      { time:'After work', tasks:[
+        {id:'tue-1', text:'Visit Museum of Modern Art', note:'Plan 1.5–2 hrs — Van Gogh, Picasso, Monet, Warhol.'}
+      ]},
+      { time:'Evening', tasks:[
+        {id:'tue-2', text:'Walk into Central Park', note:'Sit for a bit. Watch people. Enjoy being in NYC.'}
+      ]}
+    ]
+  },
+  {
+    id:'wed', day:'Wednesday', subtitle:'The "Real NYC" Evening', badge:'N', color:'#E8B800',
+    blocks:[
+      { time:'Chelsea', tasks:[
+        {id:'wed-1', text:'Visit Chelsea Market', note:'Grab dinner.'}
+      ]},
+      { time:'Sunset', tasks:[
+        {id:'wed-2', text:'Walk the entire High Line', note:'Elevated park on old train tracks — amazing views.'}
+      ]},
+      { time:'Night', tasks:[
+        {id:'wed-3', text:'Wander West Village', note:'No destination, just walk. Feels more "New York" than Times Square.'}
+      ]}
+    ]
+  },
+  {
+    id:'thu', day:'Thursday', subtitle:'Conference Ends — biggest night', badge:'G', color:'#6CBE45',
+    blocks:[
+      { time:'SoHo', tasks:[
+        {id:'thu-1', text:'Walk around SoHo'},
+        {id:'thu-2', text:'Check out stores'},
+        {id:'thu-3', text:'People-watch'}
+      ]},
+      { time:'Little Italy', tasks:[
+        {id:'thu-4', text:'Grab dessert'}
+      ]},
+      { time:'Chinatown', tasks:[
+        {id:'thu-5', text:'Explore'}
+      ]},
+      { time:'Night', tasks:[
+        {id:'thu-6', text:'Catch a show at Comedy Cellar', note:"One of NYC's iconic comedy clubs — book ahead."}
+      ]}
+    ]
+  },
+  {
+    id:'fri', day:'Friday', subtitle:'Holiday = Full Adventure Day', badge:'7', color:'#B933AD',
+    blocks:[
+      { time:'Morning', tasks:[
+        {id:'fri-1', text:'Walk across the Brooklyn Bridge', note:'Go early — photos are incredible.'}
+      ]},
+      { time:'Afternoon', tasks:[
+        {id:'fri-2', text:'Explore DUMBO', note:'Manhattan Bridge photo spot, waterfront, skyline views.'}
+      ]},
+      { time:'Evening', tasks:[
+        {id:'fri-3', text:'Rooftop bar, steakhouse, or one final Manhattan walk', note:'Pick whichever fits the mood.'}
+      ]}
+    ]
+  },
+  {
+    id:'extra', day:'Bonus', subtitle:"Friend's Recommendation — Diamond District", badge:'D', color:'#8a8580',
+    blocks:[
+      { time:'47th St, between 5th & 6th Ave', tasks:[
+        {id:'extra-1', text:'Walk through the Diamond District', note:'Go during a weekday lunch break — jewelry dealers, diamond traders, street-level negotiations. Very NYC.'}
+      ]}
+    ]
+  },
+  {
+    id:'challenge', day:'Challenge', subtitle:'Do these before you leave', badge:'★', color:'#00933C',
+    blocks:[
+      { time:'Personal Challenge', tasks:[
+        {id:'ch-1', text:'Eat one slice of pizza'},
+        {id:'ch-2', text:'Ride the Staten Island Ferry'},
+        {id:'ch-3', text:'Walk the Brooklyn Bridge'},
+        {id:'ch-4', text:'Have one random conversation with a stranger'},
+        {id:'ch-5', text:"Take one skyline photo you'll actually keep"},
+        {id:'ch-6', text:'Post in the Nepali NYC group asking for local recommendations'}
+      ]}
+    ]
+  }
+];
+
+/* =========================================================
+   STATE (localStorage)
+========================================================= */
+const STORAGE_KEY = 'nycFieldGuide_v2';
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { tasks:{}, custom:{}, doneOpen:{} };
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadState();
+const nowISO = () => new Date().toISOString();
+
+tripData.forEach(day=>{
+  day.blocks.forEach(block=>{
+    block.tasks.forEach(t=>{
+      if(!state.tasks[t.id]) state.tasks[t.id] = { done:false, createdAt: nowISO(), completedAt:null };
+    });
+  });
+  if(!state.custom[day.id]) state.custom[day.id] = [];
+  if(state.doneOpen[day.id] === undefined) state.doneOpen[day.id] = false;
+});
+
+/* =========================================================
+   RENDER (with FLIP animation for moves)
+========================================================= */
+const daysEl = document.getElementById('days');
+
+function fmtTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function render(){
+  const oldRects = {};
+  document.querySelectorAll('[data-task-id]').forEach(el=>{
+    oldRects[el.dataset.taskId] = el.getBoundingClientRect();
+  });
+
+  daysEl.innerHTML = '';
+  let totalAll = 0, doneAll = 0;
+
+  tripData.forEach((day, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'day';
+    card.style.setProperty('--line', day.color);
+    card.style.animationDelay = (idx * 0.05) + 's';
+
+    let dayTotal = 0, dayDone = 0;
+    const doneItems = [];
+
+    card.innerHTML = `
+      <div class="day-head">
+        <div class="badge" style="background:${day.color}">${day.badge}</div>
+        <div class="day-titles">
+          <h2>${day.day}</h2>
+          <p>${day.subtitle}</p>
+        </div>
+        <div class="day-count" id="count-${day.id}"></div>
+      </div>
+    `;
+
+    day.blocks.forEach(block=>{
+      const undone = block.tasks.filter(t=>!state.tasks[t.id].done);
+      block.tasks.forEach(t=>{
+        dayTotal++; totalAll++;
+        if(state.tasks[t.id].done){ dayDone++; doneAll++; doneItems.push({...t, time:block.time}); }
+      });
+
+      const blockEl = document.createElement('div');
+      blockEl.className = 'block';
+      let html = `<span class="block-time" style="background:${day.color}">${block.time}</span>`;
+      if(block.note) html += `<div class="block-note">${block.note}</div>`;
+      blockEl.innerHTML = html;
+
+      undone.forEach(t=>{
+        blockEl.appendChild(renderTask(t.id, t.text, t.note, state.tasks[t.id], day.color, false, null, null));
+      });
+
+      if(undone.length || block.note) card.appendChild(blockEl);
+    });
+
+    const customUndone = state.custom[day.id].filter(t=>!state.tasks[t.id].done);
+    state.custom[day.id].forEach(t=>{
+      dayTotal++; totalAll++;
+      if(state.tasks[t.id].done){ dayDone++; doneAll++; doneItems.push({...t, time:'Added by you', custom:true}); }
+    });
+    if(customUndone.length){
+      const customBlock = document.createElement('div');
+      customBlock.className = 'block';
+      customBlock.innerHTML = `<span class="block-time" style="background:${day.color}">Added by you</span>`;
+      customUndone.forEach(t=>{
+        customBlock.appendChild(renderTask(t.id, t.text, null, state.tasks[t.id], day.color, true, day.id, null));
+      });
+      card.appendChild(customBlock);
+    }
+
+    if(doneItems.length){
+      const doneSection = document.createElement('div');
+      doneSection.className = 'done-section' + (state.doneOpen[day.id] ? ' open' : '');
+      doneSection.innerHTML = `
+        <button class="done-toggle" data-day="${day.id}"><span class="arrow">▸</span> ✓ Done (${doneItems.length})</button>
+        <div class="done-list"></div>
+      `;
+      const list = doneSection.querySelector('.done-list');
+      doneItems.forEach(t=>{
+        list.appendChild(renderTask(t.id, t.text, t.note, state.tasks[t.id], day.color, !!t.custom, t.custom ? day.id : null, t.time));
+      });
+      doneSection.querySelector('.done-toggle').addEventListener('click', ()=>{
+        state.doneOpen[day.id] = !state.doneOpen[day.id];
+        saveState();
+        doneSection.classList.toggle('open');
+      });
+      card.appendChild(doneSection);
+    }
+
+    setTimeout(()=>{
+      const el = card.querySelector(`#count-${day.id}`);
+      if(el) el.textContent = `${dayDone}/${dayTotal}`;
+    },0);
+
+    const addRow = document.createElement('div');
+    addRow.className = 'add-row';
+    addRow.innerHTML = `<input type="text" placeholder="Add your own stop…" /><button>+ Add</button>`;
+    const input = addRow.querySelector('input');
+    const btn = addRow.querySelector('button');
+    const addFn = ()=>{
+      const val = input.value.trim();
+      if(!val) return;
+      const id = 'custom-' + day.id + '-' + Date.now();
+      state.custom[day.id].push({ id, text: val });
+      state.tasks[id] = { done:false, createdAt: nowISO(), completedAt:null };
+      saveState();
+      render();
+    };
+    btn.addEventListener('click', addFn);
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') addFn(); });
+    card.appendChild(addRow);
+
+    daysEl.appendChild(card);
+  });
+
+  document.querySelectorAll('[data-task-id]').forEach(el=>{
+    const old = oldRects[el.dataset.taskId];
+    if(old){
+      const newRect = el.getBoundingClientRect();
+      const dx = old.left - newRect.left;
+      const dy = old.top - newRect.top;
+      if(dx || dy){
+        el.style.transition = 'none';
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(()=>{
+          el.style.transition = 'transform .45s cubic-bezier(.4,0,.2,1)';
+          el.style.transform = '';
+        });
+      }
+    } else {
+      el.classList.add('enter');
+    }
+  });
+
+  const pct = totalAll ? Math.round((doneAll/totalAll)*100) : 0;
+  document.getElementById('progressText').textContent = `${doneAll} / ${totalAll} stops complete`;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('celebrate').classList.toggle('show', pct === 100 && totalAll > 0);
+}
+
+function renderTask(id, text, note, s, color, removable, dayId, fromTime){
+  const row = document.createElement('div');
+  row.className = 'task' + (s.done ? ' done' : '');
+  row.dataset.taskId = id;
+
+  const checkWrap = document.createElement('div');
+  checkWrap.className = 'check-wrap';
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.className = 'check';
+  check.style.borderColor = color;
+  if(s.done) check.style.background = color;
+  check.checked = s.done;
+  check.addEventListener('change', ()=>{
+    s.done = check.checked;
+    s.completedAt = s.done ? nowISO() : null;
+    saveState();
+    render();
+  });
+  const mark = document.createElement('span');
+  mark.className = 'check-mark';
+  mark.textContent = '✓';
+  checkWrap.appendChild(check);
+  checkWrap.appendChild(mark);
+
+  const body = document.createElement('div');
+  body.className = 'task-body';
+  let html = `<div class="task-text">${text}</div>`;
+  if(note) html += `<div class="task-note">${note}</div>`;
+  if(s.done && s.completedAt){
+    html += `<div class="task-time">✓ done — ${fmtTime(s.completedAt)}</div>`;
+  } else if(!s.done && removable && s.createdAt){
+    html += `<div class="task-time" style="color:#999">added ${fmtTime(s.createdAt)}</div>`;
+  }
+  if(fromTime){
+    html += `<div class="task-from">${fromTime}</div>`;
+  }
+  body.innerHTML = html;
+
+  row.appendChild(checkWrap);
+  row.appendChild(body);
+
+  if(removable){
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '✕';
+    del.title = 'Remove';
+    del.addEventListener('click', ()=>{
+      state.custom[dayId] = state.custom[dayId].filter(t=>t.id !== id);
+      delete state.tasks[id];
+      saveState();
+      render();
+    });
+    row.appendChild(del);
+  }
+
+  return row;
+}
+
+render();
+
+/* =========================================================
+   JSON EXPORT
+========================================================= */
+function buildExport(){
+  const out = { exportedAt: nowISO(), trip: 'NYC Field Guide — Greenwich St HQ', days: [] };
+
+  tripData.forEach(day=>{
+    const dayOut = { day: day.day, subtitle: day.subtitle, items: [] };
+
+    day.blocks.forEach(block=>{
+      block.tasks.forEach(t=>{
+        const s = state.tasks[t.id];
+        dayOut.items.push({
+          id: t.id, time: block.time, text: t.text, note: t.note || null,
+          done: s.done, createdAt: s.createdAt, completedAt: s.completedAt
+        });
+      });
+    });
+
+    state.custom[day.id].forEach(t=>{
+      const s = state.tasks[t.id];
+      dayOut.items.push({
+        id: t.id, time: 'Added by you', text: t.text, note: null,
+        done: s.done, createdAt: s.createdAt, completedAt: s.completedAt, custom: true
+      });
+    });
+
+    out.days.push(dayOut);
+  });
+
+  let total=0, done=0;
+  out.days.forEach(d=> d.items.forEach(i=>{ total++; if(i.done) done++; }));
+  out.summary = { totalItems: total, completedItems: done, percentComplete: total ? Math.round((done/total)*100) : 0 };
+
+  return out;
+}
+
+const copyBtn = document.getElementById('copyBtn');
+const copyStatus = document.getElementById('copyStatus');
+const jsonLog = document.getElementById('jsonLog');
+const toggleLog = document.getElementById('toggleLog');
+
+copyBtn.addEventListener('click', async ()=>{
+  const data = buildExport();
+  const json = JSON.stringify(data, null, 2);
+  jsonLog.textContent = json;
+  try{
+    await navigator.clipboard.writeText(json);
+    copyStatus.textContent = `✓ Copied — ${data.summary.completedItems}/${data.summary.totalItems} stops (${data.summary.percentComplete}%)`;
+    copyStatus.style.color = '#7CFFB2';
+  }catch(e){
+    copyStatus.textContent = '⚠ Could not access clipboard — JSON shown below, copy manually.';
+    copyStatus.style.color = '#ffb000';
+    jsonLog.classList.add('show');
+  }
+  setTimeout(()=>{ copyStatus.textContent = ''; }, 4000);
+});
+
+toggleLog.addEventListener('click', ()=>{
+  if(!jsonLog.textContent){ jsonLog.textContent = JSON.stringify(buildExport(), null, 2); }
+  jsonLog.classList.toggle('show');
+});
+
+/* =========================================================
+   PWA — service worker
+========================================================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(err=>{
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>

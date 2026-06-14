@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#000"/>
+  <rect x="48" y="48" width="416" height="416" rx="72" fill="#ffd400"/>
+  <text x="256" y="220" text-anchor="middle" font-family="Georgia, serif" font-weight="800" font-size="108" fill="#000">NYC</text>
+  <text x="256" y="320" text-anchor="middle" font-family="monospace" font-weight="700" font-size="44" letter-spacing="6" fill="#000">GUIDE</text>
+</svg>
