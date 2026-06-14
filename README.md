@@ -2,6 +2,8 @@
 
 A Progressive Web App trip planner optimized for **Greenwich St** — daily checklists, progress tracking, custom stops, and JSON export. Works offline after first load.
 
+**Live app:** https://bigexperiment.github.io/nyc-trip-planner/
+
 ## Install on your phone
 
 1. Open the live app in Safari (iOS) or Chrome (Android).
